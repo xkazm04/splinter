@@ -19,7 +19,6 @@ const Kontejner = styled.div`
 
 export default function Home() {
   const [json,setJson] = useState('')
-  const [separatedJSON, setSeparatedJSON] = useState([])
   const [file, setFile] = useState("");
   // Result bude array se dvěma jsony - Každý result se namapuje do vlastního code mirroru
   const [result, setResult] = useState([]);
@@ -33,8 +32,9 @@ export default function Home() {
     };
   };
 
+
   const processJson = (json) => {
-    let results = {};
+    let specifications = {};
     const endpoints = json.paths;
 
     // loop endpoints
@@ -54,29 +54,32 @@ export default function Home() {
         const fileName = tag.split('/').slice(0,-1).join('/');
 
         // Trade
-        const newFileTag = tag.split('/').at(-1);
+        const endpointTag = tag.split('/').at(-1);
 
-        if(results.hasOwnProperty(fileName)){
-          // if endpoint already exists
-          if(results[fileName]['paths'].hasOwnProperty(key)){
-              results[fileName]['paths'][key] = {...results[fileName]['paths'][key], [method]: endpoint[method] }
+        if(specifications.hasOwnProperty(fileName)){
+          const fileTags = specifications[fileName]['tags'];
+          const tagExists =  fileTags?.find(tag => tag.name === endpointTag);
+
+          if(!tagExists){
+            specifications[fileName]['tags'] = [...specifications[fileName]['tags'], {description:'', name: endpointTag}];
+          }
+
+          if(specifications[fileName]['paths'].hasOwnProperty(key)){
+              specifications[fileName]['paths'][key] = {...specifications[fileName]['paths'][key], [method]:{... endpoint[method], tags: endpointTag} }
           } else {
-            results[fileName]['paths'][key] = {[method]: endpoint[method]}
+              specifications[fileName]['paths'][key] = {[method]: {... endpoint[method], tags: endpointTag}}
           }
         } else {
           const endpointMethod = endpoint[method];
-          const apiSpecification = Object.assign({}, {...newSpecification, tags: newFileTag, paths: {[key]: {[method]: endpointMethod}} })
-          results[fileName] = apiSpecification;
+          const apiSpecification = Object.assign({}, {...newSpecification, tags: [{description: '', name: endpointTag}], paths: {[key]: {[method]: {...endpointMethod, tags: endpointTag}}} })
+          specifications[fileName] = apiSpecification;
         }
-      
       }
       
     }
-    for(let key in results){
-      setResult(prev => [...prev, results[key]]);
+    for(let key in specifications){
+      setResult(prev => [...prev, specifications[key]]);
     }
-    console.log('result',results)
-    // setResult(result)
   };
 
   useEffect(() => {
